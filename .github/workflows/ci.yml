@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run lint:check
+      # Bun strips types without checking them, so this step is what actually
+      # validates the type annotations. Do not remove it.
+      - run: bun run typecheck
+      - run: bun test
+
+  docker:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      # Only a push to main may publish. A pull_request build runs the same
+      # multi-arch compile but stops short of the registry, so a PR — including
+      # one from a fork, whose GITHUB_TOKEN is read-only anyway — can never
+      # overwrite the :dev tag that main owns.
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build both architectures, publishing :dev only on a main push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'push' }}
+          tags: ghcr.io/${{ github.repository_owner }}/beszel-mcp:dev
+          # The arm64 leg runs under QEMU and dominates the job's wall time.
+          # Caching it in Actions keeps unchanged layers from being rebuilt on
+          # every push; mode=max also caches the builder stage, which is where
+          # bun install and bun build actually live.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,0 +1,11 @@
+services:
+  beszel-mcp:
+    image: ghcr.io/maxbth/beszel-mcp:latest
+    ports:
+      - '3000:3000'
+    environment:
+      BESZEL_URL: https://beszel.example.com
+      BESZEL_EMAIL: readonly@example.com
+      BESZEL_PASSWORD: changeme
+      MCP_AUTH_TOKEN: generate-a-long-random-string
+    restart: unless-stopped

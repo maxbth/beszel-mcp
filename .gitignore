@@ -1,0 +1,10 @@
+.superpowers/
+.claude/
+node_modules/
+dist/
+.env*
+!.env.example
+*.log
+*.tsbuildinfo
+coverage/
+.DS_Store
