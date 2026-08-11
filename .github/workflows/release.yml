@@ -51,6 +51,11 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # Shares the cache CI populates on every push to main, so tagging a release
+          # that points at an already-built commit reuses those layers instead of
+          # recompiling both architectures — the arm64 leg runs under QEMU and would
+          # otherwise dominate the release's wall time.
+          cache-from: type=gha
 
       - uses: actions/attest-build-provenance@v2
         with:
